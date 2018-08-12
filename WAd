@@ -1,0 +1,117 @@
+#!/data/data/com.termux/files/usr/bin/env bash
+set -e
+src="/data/data"
+pkg="" # edit the value if you have your own whatsapp package name.
+if [ -z $pkg ]; then
+if [ -e $src/com.gbwhatsapp ]; then
+pkg="com.gbwhatsapp"
+elif [ -e $src/com.whatsapp ]; then
+pkg="com.whatsapp"
+fi
+else
+continue
+fi
+if [ ! -e $src/$pkg ]; then
+echo "Error : Can't find WhatsApp package name in $src.
+Makesure you intall the WhatsApp application."
+exit 0
+fi
+cek(){
+echo "$( grep "$1" << str
+$2
+str
+)
+"
+}
+get(){
+gid="$2"
+if [ "$1" = "gid" ]; then
+sr="msgstore.db"
+data="select key_remote_jid,subject from chat_list where key_remote_jid LIKE '%@g.us%'"
+elif [ "$1" = "c" ]; then
+sr="wa.db"
+data="select number from wa_contacts where is_whatsapp_user = '1' and number not like '%@s%'"
+elif [ "$1" = "cn" ]; then
+sr="wa.db"
+data="select number,display_name from wa_contacts where is_whatsapp_user = '1' and number not like '%@s%'"
+elif [ "$1" = "ga" ]; then
+sr="msgstore.db"
+data="select jid from group_participants where admin = '1' and gjid like '%${gid}%'"
+elif [ "$1" = "gm" ]; then
+sr="msgstore.db"
+data="select jid from group_participants where gjid like '%${gid}%'"
+fi
+dump=$( sqlite3 -newline '#' $src/$pkg/databases/$sr "$data"; )
+
+
+
+
+mk=(${dump//|/ })
+mk2=(${mk[@]//#/ })
+for res in ${mk2[@]}; do
+if [[ "$res" = +* || ! -z $( cek "@g" $res ) || ! -z $( cek "@s" $res ) || "$res" =~ [0-9]* && ! "$res" =~ [a-zA-Z] && "${#res}" -gt 5 && "${#res}" -lt 15 ]]; then #
+nm=(${res//@/ })
+if [[ "$1" = "gid" ]]; then
+m=(${nm//-/ })
+nm2=${m[1]}
+else
+nm2=(${nm//+/ })
+fi
+if [[ "${nm2}" =~ [0-9] ]]; then
+echo -ne "\n${nm2} "
+unset nm2 nm
+
+else
+echo -n " $res"
+fi
+else
+echo -n " $res"
+fi
+done
+}
+usage(){
+echo "
+App name   : WAd
+Created by : [M]iZun0
+FB         : sushiroku1
+Thanks to  :
+Cvar1984 a.k.a Ramdhan Firmansyah for the idea.
+Amsit Swara
+And all BlackHole Security members.
+
+Bug? tell me or fix by yourself.
+Usage :
+-c            | --contact                     Dump all your whatsapp contact (number).
+-cn                                           Like -c but including name.
+-gm <id>      | --group-member <id>           Dump all member contact in your group (number only).
+-gid          | --group-id                    Dump all group id.
+-ga <id>      | --group-admin <id>            Dump group admin contact.
+-o <filename> | --output <filename>           Save output to file.
+-h            | --help                        Print this message.
+"
+}
+parse(){
+saveto=""
+param=""
+	while [ "$1" != "" ]; do
+case "$1" in
+   -h       | --help            ) usage; exit 1;;
+   -c       | --contact         ) param+="$( get c )\n";;
+   -cn                          ) param+="$( get cn )\n";;
+   -gm      | --group-member    ) param+="$( get gm "$2" )\n"; shift;;
+   -gid     | --group-id        ) param+="$( get gid )\n";;
+   -ga      | --group-admin     ) param+="$( get ga "$2" )\n"; shift;;
+   -o       | --output          ) saveto="$2"; shift;;
+   *                            ) echo -e "$0 : Invalid option '$1' \n Type '$0 -h' for information."; exit 1;;
+esac
+shift
+done
+
+}
+parse "$@"
+if [ -z "$saveto" ]; then
+echo -e "$param"
+else
+echo -e "$param" >> $saveto
+echo "Saved to $saveto"
+fi
