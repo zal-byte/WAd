@@ -3,12 +3,11 @@
 
 Langkah sebelum menjalankan tool ini :
 
-Beri akses root pada termux
-Install sudo di termux
+Beri akses root pada termux dan install sudo di termux
 
-Penggunaan :
+# Penggunaan :
 
-# V1.0 :
+# V1.0
 su -c ./WAd -h
 
 # V2.0
